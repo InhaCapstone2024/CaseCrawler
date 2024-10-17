@@ -1,6 +1,11 @@
 package crawling.crawler.repository;
 
 import crawling.crawler.domain.CaseContent;
+import crawling.crawler.domain.CaseInfo;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.EntityTransaction;
+import jakarta.persistence.Persistence;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -8,11 +13,21 @@ import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class CaseRepository {
     public static void main(String[] args) throws Exception {
+
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("crawler");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+
         String url = "https://www.law.go.kr/DRF/lawSearch.do?OC=wkdtmf357&target=prec&type=XML";
         try {
+
+
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 
@@ -24,8 +39,7 @@ public class CaseRepository {
 
             int totalCnt = Integer.parseInt(getTagValue("totalCnt", (Element) count.item(0)));
 
-//            for (int page = 1; page <= (totalCnt/20) ; page++){
-              for (int page = 1; page <= 5; page++) {
+            for (int page = 1; page <= (totalCnt / 20) ; page++){
                 String pageUrl= url + "&page=" + page;
                 doc = dBuilder.parse(pageUrl);
                 doc.getDocumentElement().normalize();
@@ -44,32 +58,39 @@ public class CaseRepository {
                     if(nNode.getNodeType() == Node.ELEMENT_NODE){
                         Element eElement = (Element) nNode;
 
-                        String caseNumber = getTagValue("판례일련번호", eElement);
-                        CaseContent caseContent = getCaseContent(Long.parseLong(caseNumber));
+                        Long id = Long.parseLong(getTagValue("판례일련번호", eElement));
+                        CaseContent caseContent = getCaseContent(id);
+                        String caseName = getTagValue("사건명", eElement);
+                        String caseNumber = getTagValue("사건번호", eElement);
+                        LocalDate date = LocalDate.parse(getTagValue("선고일자", eElement).replaceAll("\\.", "-"));
+                        String courtName = getTagValue("법원명", eElement);
+                        String caseType = getTagValue("사건종류명", eElement);
+                        String judgeType = getTagValue("판결유형", eElement);
+                        String caseUrl = getTagValue("판례상세링크", eElement);
+
                         String decision = caseContent.getDecision().replaceAll("<br\\s*/?>", "");
                         String substance = caseContent.getSubstance().replaceAll("<br\\s*/?>", "");
                         String reference = caseContent.getReference().replaceAll("<br\\s*/?>", "");
-                        String content = caseContent.getDecision().replaceAll("<br\\s*/?>", "");
+                        String content = caseContent.getContent().replaceAll("<br\\s*/?>", "");
 
-                        System.out.println("------------------------------");
-                        System.out.println("판례일련번호 : " + caseNumber);
-                        System.out.println("사건명      : " + getTagValue("사건명", eElement));
-                        System.out.println("사건번호    : " + getTagValue("사건번호", eElement));
-                        System.out.println("법원명      : " + getTagValue("법원명", eElement));
-                        System.out.println("사건종류명   : " + getTagValue("사건종류명", eElement));
-                        System.out.println("판결유형    : " + getTagValue("판결유형", eElement));
-                        System.out.println("판례상세링크 : " + getTagValue("판례상세링크", eElement));
-                        System.out.println("판시사항    : " + decision);
-                        System.out.println("판결요지    : " + substance);
-                        System.out.println("참조조문    : " + reference);
-                        System.out.println("판례내용    : " + content);
+                        CaseInfo caseInfo = new CaseInfo(id, caseName, caseNumber, date, courtName,
+                                caseType, judgeType, caseUrl, decision,
+                                substance, reference, content);
+
+                        em.persist(caseInfo);
                     }
 
                 }
+
             }
+            tx.commit();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            tx.rollback();
+        } finally {
+            em.close();
         }
+
+        emf.close();
     }
 
     private static String getTagValue(String tag, Element eElement) {
