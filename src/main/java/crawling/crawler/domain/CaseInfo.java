@@ -18,6 +18,7 @@ public class CaseInfo {
     @Column(name = "CASE_ID")
     private Long id; //판례일련번호
 
+    @Lob
     private String caseName; //사건명
 
     private String caseNumber; //사건번호
