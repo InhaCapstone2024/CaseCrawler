@@ -14,7 +14,7 @@ String url = "https://www.law.go.kr/DRF/lawService.do?OC=<your_id>&target=prec&t
 String url = "https://www.law.go.kr/DRF/lawService.do?OC=<your_id>&target=lstrm&type=XML" + "&trmSeqs=" + id;
 ```
 
-META-INF 디렉토리 및 하위 파일 persistence.xml 작성 필요
+- META-INF 디렉토리 및 하위 파일 persistence.xml 작성 필요
 ### Example
 ```
 <?xml version="1.0" encoding="UTF-8"?>
