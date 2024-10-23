@@ -67,7 +67,7 @@ public class CrawlerApplication {
 		int batchCnt = 0; // 배치 카운팅
 
 		// 페이지 당 20건의 자료
-		for (int page = 1; page <= (totalCnt / 20); page++){
+		for (int page = 1; page <= 10; page++){
 			String pageUrl= url + "&page=" + page;
 			doc = dBuilder.parse(pageUrl);
 			doc.getDocumentElement().normalize();
@@ -147,7 +147,7 @@ public class CrawlerApplication {
 			int totalCnt = Integer.parseInt(getTagValue("totalCnt", (Element) count.item(0))); // 총 페이지 수
 			int batchCnt = 0; // 배치 카운트
 
-			for (int page = 1; page <= (totalCnt / 20) ; page++){
+			for (int page = 1; page <= 3; page++){
 				String pageUrl = parsed_url + "&page=" + page;
 				doc = dBuilder.parse(pageUrl);
 				doc.getDocumentElement().normalize();
@@ -171,7 +171,10 @@ public class CrawlerApplication {
 						}
 						String termName = tc.getTermName(); // 법령용어명
 						String source = tc.getSource(); // 출처
-						String description = tc.getDescription(); // 법령용어정의 (영어로 쓰여있는 경우 다수;)
+						String description = tc.getDescription(); // 법령용어정의
+						// 다른 링크로 또 연결되는 경우
+						if(description.startsWith("<a"))
+							continue;
 
 						TermInfo termInfo = new TermInfo(id, termName, source, description);
 
