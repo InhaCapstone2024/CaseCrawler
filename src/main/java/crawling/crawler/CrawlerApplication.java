@@ -1,9 +1,6 @@
 package crawling.crawler;
 
-import crawling.crawler.domain.CaseContent;
-import crawling.crawler.domain.CaseInfo;
-import crawling.crawler.domain.TermContent;
-import crawling.crawler.domain.TermInfo;
+import crawling.crawler.domain.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.EntityTransaction;
@@ -29,7 +26,7 @@ public class CrawlerApplication {
 		tx.begin();
 
 		// 판례 URL (XML)
-		String caseUrl = "https://www.law.go.kr/DRF/lawSearch.do?OC=wkdtmf357&target=prec&type=XML";
+		String caseUrl = "https://www.law.go.kr/DRF/lawSearch.do?OC=wkdtmf357&target=prec&type=XML&org=400202";
 
 		// 용어 URL (XML)
 		// dicKndCd: 010101 -> 법령 용어
@@ -39,7 +36,7 @@ public class CrawlerApplication {
 		// DB 저장 로직
 		try {
 			saveCaseInfo(caseUrl, em);
-			saveTermInfo(termUrl, em);
+//			saveTermInfo(termUrl, em);
 
 			tx.commit();
 		} catch (Exception e) {
@@ -67,7 +64,9 @@ public class CrawlerApplication {
 		int batchCnt = 0; // 배치 카운팅
 
 		// 페이지 당 20건의 자료
+//		for (int page = 1; page <= (totalCnt / 20); page++){
 		for (int page = 1; page <= 10; page++){
+			System.out.println(page);
 			String pageUrl= url + "&page=" + page;
 			doc = dBuilder.parse(pageUrl);
 			doc.getDocumentElement().normalize();
@@ -97,15 +96,35 @@ public class CrawlerApplication {
 					String judgeType = getTagValue("판결유형", eElement); // 판결유형
 					String caseUrl = getTagValue("판례상세링크", eElement); // 판례상세링크
 
+					if(!caseType.equals("형사"))
+						continue;
+
+
 					// br 태그 전처리
 					String decision = caseContent.getDecision().replaceAll("<br\\s*/?>", ""); // 판시사항
 					String substance = caseContent.getSubstance().replaceAll("<br\\s*/?>", ""); // 판결요지
 					String reference = caseContent.getReference().replaceAll("<br\\s*/?>", ""); // 참조조문
 					String content = caseContent.getContent().replaceAll("<br\\s*/?>", ""); // 판례내용
 
+					int startIndex = content.indexOf("주    문") + "주    문".length();
+					int endIndex = content.indexOf("【이    유】");
+
+					String judge = content.substring(startIndex, endIndex).trim();
+
+					WinStatus winStatus;
+
+					if((judge.contains("피고") && judge.contains("벌금"))
+							|| (judge.contains("피고") && judge.contains("징역")))
+						winStatus = WinStatus.PLAINTIFF;
+					else if(judge.contains("피고") && judge.contains("무죄"))
+						winStatus = WinStatus.DEFENDANT;
+					else
+						winStatus = WinStatus.AMBIGUOUS;
+
+
 					CaseInfo caseInfo = new CaseInfo(id, caseName, caseNumber, date, courtName,
 							caseType, judgeType, caseUrl, decision,
-							substance, reference, content);
+							substance, reference, content, winStatus);
 
 					em.persist(caseInfo); // 레코드 저장
 					batchCnt++;
@@ -147,7 +166,7 @@ public class CrawlerApplication {
 			int totalCnt = Integer.parseInt(getTagValue("totalCnt", (Element) count.item(0))); // 총 페이지 수
 			int batchCnt = 0; // 배치 카운트
 
-			for (int page = 1; page <= 3; page++){
+			for (int page = 1; page <= (totalCnt / 20); page++){
 				String pageUrl = parsed_url + "&page=" + page;
 				doc = dBuilder.parse(pageUrl);
 				doc.getDocumentElement().normalize();

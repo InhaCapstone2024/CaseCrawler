@@ -1,9 +1,6 @@
 package crawling.crawler.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -45,4 +42,6 @@ public class CaseInfo {
     @Lob
     private String content; //판례내용
 
+    @Enumerated(value = EnumType.STRING)
+    private WinStatus winStatus;
 }
