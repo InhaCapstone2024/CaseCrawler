@@ -36,7 +36,7 @@ public class CrawlerApplication {
 		// DB 저장 로직
 		try {
 			saveCaseInfo(caseUrl, em);
-//			saveTermInfo(termUrl, em);
+			saveTermInfo(termUrl, em);
 
 			tx.commit();
 		} catch (Exception e) {
@@ -64,9 +64,7 @@ public class CrawlerApplication {
 		int batchCnt = 0; // 배치 카운팅
 
 		// 페이지 당 20건의 자료
-//		for (int page = 1; page <= (totalCnt / 20); page++){
-		for (int page = 1; page <= 10; page++){
-			System.out.println(page);
+		for (int page = 1; page <= (totalCnt / 20); page++){
 			String pageUrl= url + "&page=" + page;
 			doc = dBuilder.parse(pageUrl);
 			doc.getDocumentElement().normalize();
