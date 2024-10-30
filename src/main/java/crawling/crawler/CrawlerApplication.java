@@ -36,7 +36,7 @@ public class CrawlerApplication {
 		// DB 저장 로직
 		try {
 			saveCaseInfo(caseUrl, em);
-//			saveTermInfo(termUrl, em);
+			saveTermInfo(termUrl, em);
 
 			tx.commit();
 		} catch (Exception e) {
@@ -64,8 +64,7 @@ public class CrawlerApplication {
 		int batchCnt = 0; // 배치 카운팅
 
 		// 페이지 당 20건의 자료
-//		for (int page = 1; page <= (totalCnt / 20); page++){
-		for (int page = 1; page <= 10; page++){
+		for (int page = 1; page <= (totalCnt / 20); page++){
 			String pageUrl= url + "&page=" + page;
 			doc = dBuilder.parse(pageUrl);
 			doc.getDocumentElement().normalize();
@@ -108,23 +107,10 @@ public class CrawlerApplication {
 					int startIndex = content.indexOf("주    문") + "주    문".length();
 					int endIndex = content.indexOf("【이    유】");
 
-					String judge = content.substring(startIndex, endIndex).trim();
+					if(endIndex == -1)
+						continue;
 
-					WinStatus winStatus;
-
-					if (judge.matches(".*(유죄|구속|사형|징역\\s*\\d+|금고|벌금\\s*\\d+|과료|몰수|자격상실|자격정지).*")) {
-						winStatus = WinStatus.PLAINTIFF;
-					} else if (judge.matches(".*(무죄|무혐의|불기소|기소유예|각하).*")) {
-						winStatus = WinStatus.DEFENDANT;
-					} else if (judge.contains("파기") && judge.matches(".*(징역\\s*\\d+|벌금\\s*\\d+|몰수|자격상실|자격정지).*")) {
-						winStatus = WinStatus.PLAINTIFF; // 파기 후 처벌이 있는 경우 원고 승소
-					} else if (judge.contains("피고") && judge.contains("항소") && judge.contains("기각")) {
-						winStatus = WinStatus.PLAINTIFF; // "피고인의 항소를 기각"은 원고 승소로 해석
-					} else if (judge.contains("항소") && judge.contains("기각")) {
-						winStatus = WinStatus.DEFENDANT; // "항소 기각"만 있는 경우 피고 승소로 해석
-					} else {
-						winStatus = WinStatus.AMBIGUOUS;
-					}
+					WinStatus winStatus = getWinStatus(content, startIndex, endIndex);
 
 
 					CaseInfo caseInfo = new CaseInfo(id, caseName, caseNumber, date, courtName,
@@ -150,6 +136,27 @@ public class CrawlerApplication {
 			}
 
 		}
+	}
+
+	private static WinStatus getWinStatus(String content, int startIndex, int endIndex) {
+		String judge = content.substring(startIndex, endIndex).trim();
+
+		WinStatus winStatus;
+
+		if (judge.matches(".*(유죄|구속|사형|징역\\s*\\d+|금고|벌금\\s*\\d+|과료|몰수|자격상실|자격정지).*")) {
+			winStatus = WinStatus.PLAINTIFF;
+		} else if (judge.matches(".*(무죄|무혐의|불기소|기소유예|각하).*")) {
+			winStatus = WinStatus.DEFENDANT;
+		} else if (judge.contains("파기") && judge.matches(".*(징역\\s*\\d+|벌금\\s*\\d+|몰수|자격상실|자격정지).*")) {
+			winStatus = WinStatus.PLAINTIFF; // 파기 후 처벌이 있는 경우 원고 승소
+		} else if (judge.contains("피고") && judge.contains("항소") && judge.contains("기각")) {
+			winStatus = WinStatus.PLAINTIFF; // "피고인의 항소를 기각"은 원고 승소로 해석
+		} else if (judge.contains("항소") && judge.contains("기각")) {
+			winStatus = WinStatus.DEFENDANT; // "항소 기각"만 있는 경우 피고 승소로 해석
+		} else {
+			winStatus = WinStatus.AMBIGUOUS;
+		}
+		return winStatus;
 	}
 
 	// 용어 저장 메소드
